@@ -2,6 +2,8 @@
   <div class="result-page page-container">
     <a-spin :spinning="loading" tip="加载评测结果...">
       <template v-if="result">
+        <!-- PDF 导出内容区 -->
+        <div ref="pdfContentRef">
         <!-- 总分区域 -->
         <div class="result-page__score card">
           <ScoreRing :score="result.totalScore" :maxScore="result.maxScore" size="large" />
@@ -36,17 +38,21 @@
             :keywords="result.matchedKeywords"
           />
         </div>
+        </div>
 
         <!-- 录制回放 -->
-        <div class="card" style="margin-top: 12px" v-if="recordingUrl">
+        <div class="card" style="margin-top: 12px" v-if="recordingUrl" data-html2canvas-ignore>
           <h4 class="section-title">作答回放</h4>
           <video :src="recordingUrl" controls style="width: 100%; border-radius: 8px"></video>
         </div>
 
         <!-- 底部操作 -->
-        <div class="result-page__actions">
+        <div class="result-page__actions" data-html2canvas-ignore>
           <a-button type="primary" size="large" @click="$router.push('/exam/prepare')">
             再练一题
+          </a-button>
+          <a-button size="large" :loading="exporting" @click="handleExportPdf">
+            <FilePdfOutlined /> 导出PDF
           </a-button>
           <a-button size="large" @click="$router.push('/')">
             返回首页
@@ -60,9 +66,11 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { FilePdfOutlined } from '@ant-design/icons-vue'
 import { useExamStore } from '@/stores/exam'
 import { getGrade } from '@/utils/constants'
 import { getScoringResult } from '@/api/scoring'
+import { usePdfExport } from '@/composables/usePdfExport'
 import RadarChart from '@/components/common/RadarChart.vue'
 import ScoreRing from '@/components/common/ScoreRing.vue'
 import LossAnalysis from '@/components/scoring/LossAnalysis.vue'
@@ -75,6 +83,15 @@ const loading = ref(true)
 const result = ref(null)
 const transcript = ref('')
 const recordingUrl = ref('')
+const pdfContentRef = ref(null)
+const { exporting, exportToPdf } = usePdfExport()
+
+function handleExportPdf() {
+  if (pdfContentRef.value) {
+    const examId = route.params.examId || 'report'
+    exportToPdf(pdfContentRef.value, `测评报告_${examId}`)
+  }
+}
 
 const gradeInfo = computed(() => {
   if (!result.value) return { label: '', color: '' }

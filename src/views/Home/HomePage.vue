@@ -68,18 +68,39 @@
       <h3>成绩趋势</h3>
       <div ref="trendChartRef" style="height: 200px"></div>
     </div>
+
+    <!-- 能力总览雷达图 -->
+    <div class="card home-radar" v-if="radarDimensions.length">
+      <h3>能力总览</h3>
+      <RadarChart :dimensions="radarDimensions" size="medium" />
+    </div>
+
+    <!-- 薄弱维度分析 -->
+    <WeaknessAnalysis
+      v-if="historyStore.stats?.dimensionAverages?.length"
+      :dimensionAverages="historyStore.stats.dimensionAverages"
+    />
+
+    <!-- 智能推荐练习 -->
+    <SmartRecommendation
+      v-if="historyStore.stats?.dimensionAverages?.length"
+      :weakDimensions="weakDimensionKeys"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { PlayCircleOutlined } from '@ant-design/icons-vue'
 import * as echarts from 'echarts'
 import { useHistoryStore } from '@/stores/history'
 import { useUserStore } from '@/stores/user'
 import { formatDate } from '@/utils/formatter'
-import { GRADE_CONFIG } from '@/utils/constants'
+import { GRADE_CONFIG, DIMENSIONS, WEAK_THRESHOLD } from '@/utils/constants'
 import ScoreRing from '@/components/common/ScoreRing.vue'
+import RadarChart from '@/components/common/RadarChart.vue'
+import WeaknessAnalysis from '@/components/common/WeaknessAnalysis.vue'
+import SmartRecommendation from '@/components/common/SmartRecommendation.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const historyStore = useHistoryStore()
@@ -88,6 +109,29 @@ const loading = ref(true)
 const recentRecords = ref([])
 const trendChartRef = ref(null)
 let chart = null
+
+// Transform dimensionAverages to RadarChart format
+const radarDimensions = computed(() => {
+  const avgs = historyStore.stats?.dimensionAverages
+  if (!avgs?.length) return []
+  return avgs.map(d => ({
+    name: d.name,
+    score: d.avg,
+    maxScore: d.maxScore
+  }))
+})
+
+// Identify weak dimension keys for SmartRecommendation
+const weakDimensionKeys = computed(() => {
+  const avgs = historyStore.stats?.dimensionAverages
+  if (!avgs?.length) return []
+  return avgs
+    .filter(d => d.maxScore > 0 && (d.avg / d.maxScore * 100) < WEAK_THRESHOLD)
+    .map(d => {
+      const dim = DIMENSIONS.find(dim => dim.name === d.name)
+      return dim ? dim.key : d.name
+    })
+})
 
 function gradeColor(grade) {
   return GRADE_CONFIG[grade]?.color || '#8C8C8C'

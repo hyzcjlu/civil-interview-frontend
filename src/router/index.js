@@ -1,6 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Auth/LoginPage.vue'),
+    meta: { title: '登录', layout: 'blank', requiresAuth: false }
+  },
   {
     path: '/',
     name: 'Home',
@@ -70,6 +77,16 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   document.title = `${to.meta.title || ''} - 公考面试AI智能测评`
+
+  const userStore = useUserStore()
+  const requiresAuth = to.meta.requiresAuth !== false
+
+  if (requiresAuth && !userStore.isAuthenticated) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  if (to.path === '/login' && userStore.isAuthenticated) {
+    return { path: '/' }
+  }
 })
 
 export default router

@@ -18,7 +18,7 @@ const route = useRoute()
 
 const layout = computed(() => route.meta.layout || 'default')
 const layoutClass = computed(() => `layout-${layout.value}`)
-const showHeader = computed(() => layout.value !== 'fullscreen')
+const showHeader = computed(() => layout.value !== 'fullscreen' && layout.value !== 'blank')
 const showTabBar = computed(() => layout.value === 'default')
 </script>
 
@@ -41,6 +41,9 @@ const showTabBar = computed(() => layout.value === 'default')
   padding-top: 56px;
 }
 .layout-fullscreen .app-main {
+  padding: 0;
+}
+.layout-blank .app-main {
   padding: 0;
 }
 </style>

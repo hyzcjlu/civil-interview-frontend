@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { getUserInfo, updatePreferences, getProvinces } from '@/api/user'
+import { login as loginApi, register as registerApi } from '@/api/auth'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
+    token: localStorage.getItem('token') || '',
     userInfo: { id: '', name: '', avatar: '', province: 'national' },
     selectedProvince: 'national',
     provinces: [],
@@ -14,6 +16,9 @@ export const useUserStore = defineStore('user', {
   }),
 
   getters: {
+    isAuthenticated(state) {
+      return !!state.token
+    },
     provinceName(state) {
       const p = state.provinces.find(p => p.code === state.selectedProvince)
       return p ? p.name : '国考'
@@ -21,6 +26,20 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
+    async login(username, password) {
+      const res = await loginApi(username, password)
+      this.token = res.access_token
+      localStorage.setItem('token', res.access_token)
+      return res
+    },
+    logout() {
+      this.token = ''
+      this.userInfo = { id: '', name: '', avatar: '', province: 'national' }
+      localStorage.removeItem('token')
+    },
+    async register(form) {
+      return registerApi(form)
+    },
     async loadUserInfo() {
       this.userInfo = await getUserInfo()
       this.selectedProvince = this.userInfo.province || 'national'

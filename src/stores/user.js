@@ -5,6 +5,8 @@ import { login as loginApi, register as registerApi } from '@/api/auth'
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem('token') || '',
+    username: localStorage.getItem('username') || '',
+    email: '',
     userInfo: { id: '', name: '', avatar: '', province: 'national' },
     selectedProvince: 'national',
     provinces: [],
@@ -29,13 +31,18 @@ export const useUserStore = defineStore('user', {
     async login(username, password) {
       const res = await loginApi(username, password)
       this.token = res.access_token
+      this.username = username
       localStorage.setItem('token', res.access_token)
+      localStorage.setItem('username', username)
       return res
     },
     logout() {
       this.token = ''
+      this.username = ''
+      this.email = ''
       this.userInfo = { id: '', name: '', avatar: '', province: 'national' }
       localStorage.removeItem('token')
+      localStorage.removeItem('username')
     },
     async register(form) {
       return registerApi(form)

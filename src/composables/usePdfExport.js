@@ -64,6 +64,9 @@ export function usePdfExport() {
       }
 
       pdf.save(`${fileName}.pdf`)
+      // 释放 canvas 内存
+      canvas.width = 0
+      canvas.height = 0
       message.success('PDF导出成功')
     } catch (e) {
       console.error('PDF export failed:', e)

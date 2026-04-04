@@ -5,6 +5,9 @@
       <span class="exam-room__progress">
         {{ examStore.currentQuestionNumber }} / {{ examStore.totalQuestions }}
       </span>
+      <span v-if="examStore.mockMode" class="exam-room__total-timer">
+        {{ formattedElapsed }}
+      </span>
       <a-popconfirm title="确定退出考试？已答题目不会丢失。" @confirm="exitExam">
         <a-button type="text" size="small" style="color: rgba(255,255,255,0.8)">
           <CloseOutlined /> 退出
@@ -87,7 +90,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CloseOutlined, CheckCircleFilled } from '@ant-design/icons-vue'
 import { useExamStore } from '@/stores/exam'
@@ -108,6 +111,16 @@ const stream = recorder.stream
 const recorderDuration = recorder.duration
 const countdown = useCountdown(0)
 
+// 模拟面试全程计时
+const elapsed = ref(0)
+let elapsedTimer = null
+
+const formattedElapsed = computed(() => {
+  const m = Math.floor(elapsed.value / 60)
+  const s = elapsed.value % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+})
+
 const dimensionName = computed(() => {
   const q = examStore.currentQuestion
   if (!q) return ''
@@ -122,14 +135,26 @@ const gradeLabel = computed(() => {
 
 onMounted(async () => {
   await recorder.initStream()
+  if (examStore.mockMode && examStore.examStartTime) {
+    elapsedTimer = setInterval(() => {
+      elapsed.value = Math.floor((Date.now() - examStore.examStartTime) / 1000)
+    }, 1000)
+  }
   if (examStore.currentQuestion && examStore.status === EXAM_STATUS.IDLE) {
-    // 自动进入准备阶段
+    if (examStore.mockMode) {
+      // 模拟面试自动开始准备
+      onStartPrep()
+    }
   }
 })
 
 onUnmounted(() => {
   recorder.destroyStream()
   countdown.stop()
+  clearInterval(elapsedTimer)
+  if (examStore.mockMode) {
+    examStore.examElapsed = elapsed.value
+  }
 })
 
 function onStartPrep() {
@@ -171,10 +196,19 @@ async function onSubmit() {
 function onNext() {
   examStore.nextQuestion()
   countdown.reset(0)
+  if (examStore.mockMode) {
+    // 模拟面试自动开始下一题准备
+    setTimeout(() => onStartPrep(), 500)
+  }
 }
 
 function onFinish() {
   const examId = examStore.examId
+  if (!examId) {
+    message.error('考试数据异常，返回首页')
+    router.push('/')
+    return
+  }
   router.push(`/result/${examId}`)
 }
 
@@ -211,5 +245,14 @@ function exitExam() {
 
 .exam-room__brief-result {
   flex-shrink: 0;
+}
+
+.exam-room__total-timer {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
 }
 </style>

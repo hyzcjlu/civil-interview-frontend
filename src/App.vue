@@ -9,17 +9,31 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import http from '@/api/index'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppTabBar from '@/components/layout/AppTabBar.vue'
 
 const route = useRoute()
+const userStore = useUserStore()
 
 const layout = computed(() => route.meta.layout || 'default')
 const layoutClass = computed(() => `layout-${layout.value}`)
 const showHeader = computed(() => layout.value !== 'fullscreen' && layout.value !== 'blank')
 const showTabBar = computed(() => layout.value === 'default')
+
+// 启动时校验 token 有效性
+onMounted(async () => {
+  if (userStore.isAuthenticated) {
+    try {
+      await http.get('/user/me')
+    } catch {
+      // 401 会被 axios 拦截器自动处理（清除 token 并跳转登录页）
+    }
+  }
+})
 </script>
 
 <style lang="less">

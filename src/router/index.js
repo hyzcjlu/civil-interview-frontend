@@ -63,10 +63,52 @@ const routes = [
     meta: { title: '历史记录', layout: 'default' }
   },
   {
+    path: '/favorites',
+    name: 'Favorites',
+    component: () => import('@/views/Favorites/FavoritesPage.vue'),
+    meta: { title: '错题本', layout: 'default' }
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/Profile/ProfilePage.vue'),
-    meta: { title: '个人设置', layout: 'default' }
+    meta: { title: '个人中心', layout: 'default' }
+  },
+  {
+    path: '/targeted',
+    name: 'Targeted',
+    component: () => import('@/views/Targeted/TargetedPage.vue'),
+    meta: { title: '定向备面', layout: 'default' }
+  },
+  {
+    path: '/targeted/focus',
+    name: 'TargetedFocus',
+    component: () => import('@/views/Targeted/FocusAnalysisPage.vue'),
+    meta: { title: '面试重点分析', layout: 'simple' }
+  },
+  {
+    path: '/training',
+    name: 'Training',
+    component: () => import('@/views/Training/TrainingPage.vue'),
+    meta: { title: '专项训练', layout: 'default' }
+  },
+  {
+    path: '/training/:dimension',
+    name: 'DimensionTraining',
+    component: () => import('@/views/Training/DimensionTraining.vue'),
+    meta: { title: '维度训练', layout: 'simple' }
+  },
+  {
+    path: '/profile/account',
+    name: 'Account',
+    component: () => import('@/views/Profile/AccountPage.vue'),
+    meta: { title: '账号管理', layout: 'simple' }
+  },
+  {
+    path: '/profile/analysis',
+    name: 'Analysis',
+    component: () => import('@/views/Profile/AnalysisPage.vue'),
+    meta: { title: '个人分析', layout: 'simple' }
   }
 ]
 

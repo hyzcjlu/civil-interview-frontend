@@ -17,9 +17,9 @@
 import { useRoute } from 'vue-router'
 import {
   HomeOutlined,
-  EditOutlined,
+  AimOutlined,
   DatabaseOutlined,
-  HistoryOutlined,
+  ThunderboltOutlined,
   UserOutlined
 } from '@ant-design/icons-vue'
 
@@ -27,9 +27,9 @@ const route = useRoute()
 
 const tabs = [
   { path: '/', label: '首页', icon: HomeOutlined },
-  { path: '/exam/prepare', label: '开始测评', icon: EditOutlined },
+  { path: '/targeted', label: '定向备面', icon: AimOutlined },
   { path: '/bank', label: '题库', icon: DatabaseOutlined },
-  { path: '/history', label: '历史', icon: HistoryOutlined },
+  { path: '/training', label: '专项训练', icon: ThunderboltOutlined },
   { path: '/profile', label: '我的', icon: UserOutlined }
 ]
 

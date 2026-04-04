@@ -10,4 +10,10 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(Antd)
+
+// 全局错误处理
+app.config.errorHandler = (err, instance, info) => {
+  console.error(`[Vue Error] ${info}:`, err)
+}
+
 app.mount('#app')

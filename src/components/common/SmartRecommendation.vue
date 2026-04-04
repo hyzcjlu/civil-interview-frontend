@@ -103,7 +103,7 @@ async function fetchRecommendations() {
 }
 
 function startPractice(item) {
-  router.push('/exam/prepare')
+  router.push({ path: '/exam/prepare', query: { questionId: item.id } })
 }
 
 onMounted(() => {

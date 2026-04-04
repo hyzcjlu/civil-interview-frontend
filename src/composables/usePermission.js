@@ -43,20 +43,21 @@ export function usePermission() {
       micReady.value = true
       checking.value = false
       return true
-    } catch (e) {
+    } catch {
       // 同时请求失败，尝试分别检测以确定具体哪个设备有问题
-      checking.value = false
       await checkCamera()
       // 加延迟避免设备占用冲突
       await new Promise(r => setTimeout(r, 500))
       await checkMicrophone()
+      checking.value = false
 
       if (!cameraReady.value && !micReady.value) {
         error.value = '摄像头和麦克风均无法访问，请检查设备连接和浏览器权限设置'
-      } else if (!cameraReady.value) {
+      } else if (!cameraReady.value && micReady.value) {
+        // 摄像头不可用但麦克风正常，提示用户可以继续
         error.value = '摄像头无法访问，可尝试仅使用麦克风模式'
       } else if (!micReady.value) {
-        error.value = '麦克风无法访问: ' + (e.message || '请检查设备是否被其他程序占用')
+        error.value = '麦克风无法访问，请检查设备是否被其他程序占用'
       }
       return cameraReady.value && micReady.value
     }

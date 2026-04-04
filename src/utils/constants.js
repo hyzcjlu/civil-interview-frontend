@@ -70,3 +70,17 @@ export const DIMENSION_TIPS = {
 
 // 薄弱维度阈值（低于此百分比标记为薄弱）
 export const WEAK_THRESHOLD = 60
+
+// 岗位系统
+export const POSITION_SYSTEMS = [
+  { code: 'tax', name: '税务系统' },
+  { code: 'customs', name: '海关系统' },
+  { code: 'police', name: '公安系统' },
+  { code: 'court', name: '法院系统' },
+  { code: 'procurate', name: '检察系统' },
+  { code: 'market', name: '市场监管' },
+  { code: 'general', name: '综合管理' },
+  { code: 'township', name: '乡镇基层' },
+  { code: 'finance', name: '银保监会' },
+  { code: 'diplomacy', name: '外交系统' }
+]

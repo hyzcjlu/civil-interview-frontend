@@ -1,5 +1,17 @@
 <template>
   <div class="exam-prepare page-container">
+    <!-- 候考室倒计时 -->
+    <div v-if="waitingRoom" class="waiting-room card">
+      <div class="waiting-room__icon">🏛️</div>
+      <h2>候考室</h2>
+      <p class="waiting-room__hint">模拟面试即将开始，请做好准备</p>
+      <div class="waiting-room__countdown">{{ waitCountdown }}</div>
+      <p class="waiting-room__tip">提示：调整坐姿，保持自信微笑，深呼吸放松</p>
+      <a-button type="text" @click="skipWaiting">跳过等待</a-button>
+    </div>
+
+    <!-- 正常设备检测流程 -->
+    <template v-else>
     <h2 class="exam-prepare__title">设备检测</h2>
     <p class="exam-prepare__desc">开始测评前，请确认摄像头和麦克风正常工作</p>
 
@@ -55,26 +67,45 @@
       </a-step>
     </a-steps>
 
+    <!-- 模式选择 & 进入考场 -->
     <div class="exam-prepare__actions" v-if="allReady">
-      <a-button type="primary" size="large" block @click="enterExam">
-        进入考场
+      <div class="mode-select card">
+        <h4 style="margin-bottom: 12px">选择练习模式</h4>
+        <a-radio-group v-model:value="examMode" style="width: 100%">
+          <a-space direction="vertical" style="width: 100%">
+            <a-radio value="free" class="mode-radio">
+              <span class="mode-label">自由练习</span>
+              <span class="mode-desc">随时暂停，自定义节奏</span>
+            </a-radio>
+            <a-radio value="mock" class="mode-radio">
+              <span class="mode-label">模拟面试</span>
+              <span class="mode-desc">候考等待 → 连续作答 → 全程计时，贴近真实考场</span>
+            </a-radio>
+          </a-space>
+        </a-radio-group>
+      </div>
+      <a-button type="primary" size="large" block @click="enterExam" style="margin-top: 16px">
+        {{ examMode === 'mock' ? '开始模拟面试' : '进入考场' }}
       </a-button>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { usePermission } from '@/composables/usePermission'
 import { useMediaRecorder } from '@/composables/useMediaRecorder'
 import { useExamStore } from '@/stores/exam'
-import { getRandomQuestions } from '@/api/questionBank'
+import { getRandomQuestions, getQuestionById } from '@/api/questionBank'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const examStore = useExamStore()
 const userStore = useUserStore()
+const targetedStore = useTargetedStore()
 
 const { cameraReady, micReady, error: permissionError, checkBoth, checkMicOnly } = usePermission()
 const recorder = useMediaRecorder()
@@ -86,8 +117,20 @@ const testBlobUrl = ref('')
 const testCountdown = ref(3)
 const allReady = ref(false)
 const videoEnabled = ref(true)
+const examMode = ref('free')
+
+// 候考室
+const waitingRoom = ref(false)
+const waitSeconds = ref(10)
+const waitCountdown = computed(() => {
+  const m = Math.floor(waitSeconds.value / 60)
+  const s = waitSeconds.value % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+})
 
 let countdownTimer = null
+let waitTimer = null
+let pendingQuestions = null
 
 onMounted(() => {
   doPermissionCheck()
@@ -95,6 +138,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(countdownTimer)
+  clearInterval(waitTimer)
   recorder.destroyStream()
   if (testBlobUrl.value) {
     URL.revokeObjectURL(testBlobUrl.value)
@@ -176,11 +220,72 @@ function confirmDevice() {
 
 async function enterExam() {
   recorder.destroyStream()
-  const questions = await getRandomQuestions({
-    province: userStore.selectedProvince,
-    count: 5
-  })
-  await examStore.initExam(questions)
+  let questions
+  const source = route.query.source
+  const recommendedId = route.query.questionId
+
+  if (source === 'targeted' && targetedStore.generatedQuestions.length) {
+    // 来自定向备面（批量），使用已生成的题目
+    questions = targetedStore.generatedQuestions
+  } else if (source === 'targeted' && recommendedId) {
+    // 来自定向备面（单题），从 sessionStorage 获取
+    try {
+      const cached = sessionStorage.getItem('targeted_question')
+      questions = cached ? [JSON.parse(cached)] : [await getQuestionById(recommendedId)]
+    } catch {
+      questions = await getRandomQuestions({ province: userStore.selectedProvince, count: 5 })
+    }
+  } else if (source === 'training' && recommendedId) {
+    // 来自专项训练，从 sessionStorage 获取
+    try {
+      const cached = sessionStorage.getItem('training_question')
+      questions = cached ? [JSON.parse(cached)] : [await getQuestionById(recommendedId)]
+    } catch {
+      questions = await getRandomQuestions({ province: userStore.selectedProvince, count: 5 })
+    }
+  } else if (recommendedId) {
+    // 从智能推荐跳转，使用指定题目
+    try {
+      const q = await getQuestionById(recommendedId)
+      questions = [q]
+    } catch {
+      questions = await getRandomQuestions({
+        province: userStore.selectedProvince,
+        count: 5
+      })
+    }
+  } else {
+    questions = await getRandomQuestions({
+      province: userStore.selectedProvince,
+      count: 5
+    })
+  }
+
+  if (examMode.value === 'mock') {
+    pendingQuestions = questions
+    waitingRoom.value = true
+    waitSeconds.value = 10
+    waitTimer = setInterval(() => {
+      waitSeconds.value--
+      if (waitSeconds.value <= 0) {
+        clearInterval(waitTimer)
+        startMockExam(pendingQuestions)
+      }
+    }, 1000)
+  } else {
+    await examStore.initExam(questions, false)
+    router.push('/exam/room')
+  }
+}
+
+async function skipWaiting() {
+  clearInterval(waitTimer)
+  await startMockExam(pendingQuestions)
+}
+
+async function startMockExam(questions) {
+  waitingRoom.value = false
+  await examStore.initExam(questions, true)
   router.push('/exam/room')
 }
 </script>
@@ -205,6 +310,73 @@ async function enterExam() {
 
 .exam-prepare__actions {
   margin-top: 24px;
+}
+
+.mode-select {
+  padding: 16px;
+
+  h4 {
+    font-size: @font-size-lg;
+    color: @text-primary;
+  }
+}
+
+.mode-radio {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.mode-label {
+  font-weight: 600;
+  color: @text-primary;
+  margin-right: 8px;
+}
+
+.mode-desc {
+  font-size: @font-size-xs;
+  color: @text-secondary;
+}
+
+.waiting-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 40px 24px;
+
+  h2 {
+    font-size: @font-size-xxl;
+    color: @text-primary;
+    margin: 16px 0 8px;
+  }
+}
+
+.waiting-room__icon {
+  font-size: 64px;
+}
+
+.waiting-room__hint {
+  color: @text-secondary;
+  margin-bottom: 24px;
+}
+
+.waiting-room__countdown {
+  font-size: 56px;
+  font-weight: 700;
+  color: @primary-color;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 16px;
+}
+
+.waiting-room__tip {
+  font-size: @font-size-sm;
+  color: @text-secondary;
+  max-width: 300px;
+  line-height: 1.6;
+  margin-bottom: 16px;
 }
 
 .permission-tips {

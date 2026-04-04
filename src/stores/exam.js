@@ -13,7 +13,11 @@ export const useExamStore = defineStore('exam', {
     transcript: '',
     scoringResult: null,
     answers: [],
-    deviceReady: false
+    deviceReady: false,
+    // 模拟面试模式
+    mockMode: false,
+    examStartTime: null,
+    examElapsed: 0
   }),
 
   getters: {
@@ -41,11 +45,14 @@ export const useExamStore = defineStore('exam', {
   },
 
   actions: {
-    async initExam(questions) {
+    async initExam(questions, mockMode = false) {
       this.questionList = questions
       this.currentIndex = 0
       this.answers = []
       this.status = EXAM_STATUS.IDLE
+      this.mockMode = mockMode
+      this.examStartTime = mockMode ? Date.now() : null
+      this.examElapsed = 0
       const result = await startExam(questions.map(q => q.id))
       this.examId = result.examId
     },
@@ -115,6 +122,9 @@ export const useExamStore = defineStore('exam', {
       this.recordingBlob = null
       this.transcript = ''
       this.scoringResult = null
+      this.mockMode = false
+      this.examStartTime = null
+      this.examElapsed = 0
     },
 
     setDeviceReady(ready) {

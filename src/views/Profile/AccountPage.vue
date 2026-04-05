@@ -80,6 +80,9 @@ async function saveProfile() {
       full_name: nickname.value,
       email: email.value
     })
+    // 更新本地 store 中的用户信息
+    userStore.userInfo.name = nickname.value
+    userStore.email = email.value
     message.success('信息已更新')
   } catch {
     // error handled by interceptor

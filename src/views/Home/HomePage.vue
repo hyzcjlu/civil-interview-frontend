@@ -138,13 +138,21 @@ function gradeColor(grade) {
 }
 
 onMounted(async () => {
-  await userStore.loadProvinces()
-  await Promise.all([
-    historyStore.fetchRecords({ pageSize: 3 }),
-    historyStore.fetchStats(),
-    historyStore.fetchTrend()
-  ])
-  recentRecords.value = historyStore.records.slice(0, 3)
+  try {
+    await userStore.loadProvinces()
+  } catch {
+    // 省份加载失败不影响主流程
+  }
+  try {
+    await Promise.all([
+      historyStore.fetchRecords({ pageSize: 3 }),
+      historyStore.fetchStats(),
+      historyStore.fetchTrend()
+    ])
+  } catch {
+    // API 请求失败时不阻塞页面渲染
+  }
+  recentRecords.value = (historyStore.records || []).slice(0, 3)
   loading.value = false
 
   // 渲染趋势图

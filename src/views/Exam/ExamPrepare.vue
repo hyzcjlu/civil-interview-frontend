@@ -100,6 +100,7 @@ import { useMediaRecorder } from '@/composables/useMediaRecorder'
 import { useExamStore } from '@/stores/exam'
 import { getRandomQuestions, getQuestionById } from '@/api/questionBank'
 import { useUserStore } from '@/stores/user'
+import { useTargetedStore } from '@/stores/targeted'
 
 const router = useRouter()
 const route = useRoute()
